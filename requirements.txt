@@ -1,0 +1,13 @@
+llama-index-core
+llama-index-readers-file
+tree-sitter
+tree-sitter-language-pack
+llama-index-llms-google-genai
+llama-index-embeddings-google-genai
+llama-index-embeddings-huggingface
+sentence-transformers
+pinecone-client
+llama-index-vector-stores-pinecone
+fastapi
+uvicorn
+streamlit

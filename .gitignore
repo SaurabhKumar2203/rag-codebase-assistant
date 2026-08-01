@@ -1,0 +1,6 @@
+venv/
+fastapi_repo/
+repo_*/
+.cache/
+__pycache__/
+.env
