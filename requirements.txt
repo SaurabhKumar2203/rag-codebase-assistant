@@ -6,7 +6,7 @@ llama-index-llms-google-genai
 llama-index-embeddings-google-genai
 llama-index-embeddings-huggingface
 sentence-transformers
-pinecone-client
+pinecone
 llama-index-vector-stores-pinecone
 fastapi
 uvicorn
