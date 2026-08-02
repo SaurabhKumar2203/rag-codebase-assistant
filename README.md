@@ -11,7 +11,9 @@ An advanced, production-grade Retrieval-Augmented Generation (RAG) application t
 <img width="1915" height="913" alt="image" src="https://github.com/user-attachments/assets/e3053da0-bf95-4e71-b383-d0ec0fb9b95e" />
 
 
+## 🌐 Live Demo
 
+Check out the live application here: [Multi-Repo AI Codebase Assistant] https://rag-codebase-assistant-scr63a89sw38grxrtimwcx.streamlit.app/
 ---
 
 ## 🚀 Key Features
