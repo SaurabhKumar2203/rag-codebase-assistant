@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 st.title("🤖 Multi-Repo Codebase Assistant")
-st.write("Chat with any public GitHub repository on the fly using local embeddings, reranking, and Gemini chat memory!")
+st.write("Chat with any public Python GitHub repository on the fly with lightning-fast shallow cloning, core AST chunking, local embeddings, reranking, and Gemini chat memory!")
 
 # Check for API Keys
 if "PINECONE_API_KEY" not in os.environ or "GOOGLE_API_KEY" not in os.environ:
@@ -51,15 +51,27 @@ st.sidebar.info(f"Target Namespace: **{current_namespace}**")
 def clone_and_index_repo(url: str, namespace: str):
     repo_dir = f"repo_{namespace}"
     
-    # 1. Clone repo if not already present
+    # 1. Shallow clone (--depth 1) to bypass heavy git commit history downloads
     if not os.path.exists(repo_dir):
-        with st.spinner(f"Cloning repository from {url}..."):
-            subprocess.run(["git", "clone", url, repo_dir], check=True)
+        with st.spinner(f"Cloning latest snapshot from {url}..."):
+            subprocess.run(["git", "clone", "--depth", "1", url, repo_dir], check=True)
             
-    # 2. Read Python files & chunk
-    with st.spinner("Scanning and parsing AST code chunks..."):
-        reader = SimpleDirectoryReader(input_dir=repo_dir, required_exts=[".py"], recursive=True)
-        docs = reader.load_data()
+    # 2. Read Python files and filter out heavy test/doc/example paths for high performance
+    with st.spinner("Scanning and parsing core AST code chunks..."):
+        reader = SimpleDirectoryReader(
+            input_dir=repo_dir, 
+            required_exts=[".py"], 
+            recursive=True,
+            exclude_hidden=True
+        )
+        all_docs = reader.load_data()
+        
+        # Exclude tests, docs, examples, and benchmarks to make loading instantaneous
+        excluded_keywords = ["/tests/", "\\tests\\", "/docs/", "\\docs\\", "/examples/", "\\examples\\", "/benchmarks/", "\\benchmarks\\"]
+        docs = [
+            doc for doc in all_docs 
+            if not any(kw in doc.metadata.get("file_path", "") for kw in excluded_keywords)
+        ]
         
         splitter = CodeSplitter(language="python", chunk_lines=40, chunk_lines_overlap=15, max_chars=1500)
         nodes = splitter.get_nodes_from_documents(docs)
@@ -81,10 +93,11 @@ def clone_and_index_repo(url: str, namespace: str):
     vector_store = PineconeVectorStore(pinecone_index=pinecone_index, namespace=namespace)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
     
-    with st.spinner(f"Embedding {len(nodes)} chunks and pushing to namespace '{namespace}'..."):
-        VectorStoreIndex(nodes, storage_context=storage_context, show_progress=False, insert_batch_size=100)
+    with st.spinner(f"Embedding {len(nodes)} core chunks and pushing to namespace '{namespace}'..."):
+        # Batch size 200 for faster network uploads
+        VectorStoreIndex(nodes, storage_context=storage_context, show_progress=False, insert_batch_size=200)
         
-    st.sidebar.success(f"Successfully indexed {len(nodes)} chunks!")
+    st.sidebar.success(f"Successfully indexed {len(nodes)} core chunks!")
 
 if st.sidebar.button("Load & Index Repository"):
     try:
@@ -126,7 +139,6 @@ except Exception:
     st.stop()
 
 # --- SESSION STATE & CHAT UI ---
-# Reset chat history if repo namespace changes
 if "active_namespace" not in st.session_state or st.session_state.active_namespace != current_namespace:
     st.session_state.active_namespace = current_namespace
     st.session_state.messages = [
